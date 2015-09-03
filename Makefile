@@ -95,8 +95,12 @@ DEPDIR= .deps
 
 -include $(SRCS:%.c=$(DEPDIR)/%.d)
 
+ifdef STATIC_BUILD
+STATIC_FLAGS += -static -DSTATIC_BUILD
+endif
+
 trinity: version test $(OBJS) $(HEADERS)
-	$(QUIET_CC)$(CC) $(CFLAGS) $(LDFLAGS) -o trinity $(OBJS)
+	$(QUIET_CC)$(CC) $(CFLAGS) $(LDFLAGS) $(STATIC_FLAGS) -o trinity $(OBJS)
 	@mkdir -p tmp
 
 df = $(DEPDIR)/$(*D)/$(*F)
@@ -142,3 +146,17 @@ coverity:
 	@cov-build --dir cov-int make -j $(NR_CPUS)
 	@tar cJvf trinity-coverity.tar.xz cov-int
 
+images:
+	docker build -t syscall/trinity-builder -f Dockerfile.build .
+	docker run syscall/trinity-builder > trinity
+	chmod u+x trinity
+	docker build -t fuzz/syscall .
+	docker build -t syscall/trinity .
+
+upload-images: images images-test
+	docker push syscall/trinity-builder
+	docker push syscall/trinity
+	docker push fuzz/syscall
+
+images-test: images
+	docker run -it fuzz/syscall --help

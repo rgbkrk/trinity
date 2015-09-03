@@ -1,0 +1,12 @@
+FROM debian:jessie
+
+RUN apt-get update -y
+RUN apt-get install -y build-essential
+
+ADD . /trinity
+WORKDIR /trinity
+
+RUN ./configure.sh
+RUN make -e STATIC_BUILD=1
+
+CMD ["cat", "/trinity/trinity"]

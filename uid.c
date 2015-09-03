@@ -51,7 +51,9 @@ void drop_privs(void)
 
 void init_uids(void)
 {
-	struct passwd *passwd;
+	#ifndef STATIC_BUILD
+		struct passwd *passwd;
+	#endif
 
 	orig_uid = getuid();
 	orig_gid = getgid();
@@ -59,13 +61,27 @@ void init_uids(void)
 	if (dropprivs == FALSE)
 		return;
 
-	passwd = getpwnam("nobody");
-	if (passwd == NULL) {
-		outputerr("Error getting nobody pwent (%s)\n", strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-	nobody_uid = passwd->pw_uid;
-	nobody_gid = passwd->pw_gid;
+	#ifndef STATIC_BUILD
+		passwd = getpwnam("nobody");
+		if (passwd == NULL) {
+			outputerr("Error getting nobody pwent (%s)\n", strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+		nobody_uid = passwd->pw_uid;
+		nobody_gid = passwd->pw_gid;
+	#else
+		/**
+		 * getpwnam requires the shared libraries from glibc for linking even if
+		 * statically linked. Since this static build is tilted towards Linux
+		 * environments in LXC or Docker, we're just going to set to the default
+		 * UID of nobody, 65534.
+		 *
+		 * See also:
+		 * https://en.wikipedia.org/wiki/User_identifier#Special_values
+		 */
+		nobody_uid = 65534;
+		nobody_gid = 65534;
+	#endif
 }
 
 
